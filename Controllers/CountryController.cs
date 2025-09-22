@@ -3,11 +3,10 @@ using Swashbuckle.AspNetCore.Annotations;
 using Microsoft.EntityFrameworkCore;
 
 [ApiController]
-[Route("api/[country]")]
+[Route("api/[controller]")] // <-- This is the corrected line
 public class CountryController : ControllerBase
 {
     private readonly DataContext _dataContext;
-
     public CountryController(DataContext db)
     {
         _dataContext = db;
@@ -25,7 +24,6 @@ public class CountryController : ControllerBase
     public async Task<ActionResult<Country>> Get(int id)
     {
         var country = await _dataContext.Countries.FindAsync(id);
-
         if (country == null)
         {
             return NotFound();
@@ -70,7 +68,6 @@ public class CountryController : ControllerBase
         }
 
         _dataContext.Entry(country).State = EntityState.Modified;
-
         try
         {
             await _dataContext.SaveChangesAsync();
