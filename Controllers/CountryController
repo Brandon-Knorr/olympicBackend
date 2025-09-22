@@ -1,0 +1,92 @@
+using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
+using Microsoft.EntityFrameworkCore;
+
+[ApiController]
+[Route("api/[country]")]
+public class CountryController : ControllerBase
+{
+    private readonly DataContext _dataContext;
+
+    public CountryController(DataContext db)
+    {
+        _dataContext = db;
+    }
+
+    // GET: api/Country
+    [HttpGet, SwaggerOperation(summary: "return entire collection", null)]
+    public IEnumerable<Country> Get()
+    {
+        return _dataContext.Countries;
+    }
+
+    // GET: api/Country/5
+    [HttpGet("{id}"), SwaggerOperation(summary: "return specific member of collection", null)]
+    public async Task<ActionResult<Country>> Get(int id)
+    {
+        var country = await _dataContext.Countries.FindAsync(id);
+
+        if (country == null)
+        {
+            return NotFound();
+        }
+
+        return country;
+    }
+
+    // POST: api/Country
+    [HttpPost, SwaggerOperation(summary: "add member to collection", null), ProducesResponseType(typeof(Country), 201), SwaggerResponse(201, "Created")]
+    public async Task<ActionResult<Country>> Post([FromBody] Country country)
+    {
+        _dataContext.Countries.Add(country);
+        await _dataContext.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(Get), new { id = country.Id }, country);
+    }
+
+    // DELETE: api/Country/5
+    [HttpDelete("{id}"), SwaggerOperation(summary: "delete member from collection", null), ProducesResponseType(typeof(Country), 204), SwaggerResponse(204, "No Content")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var country = await _dataContext.Countries.FindAsync(id);
+        if (country == null)
+        {
+            return NotFound();
+        }
+
+        _dataContext.Countries.Remove(country);
+        await _dataContext.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    // PUT: api/Country/5
+    [HttpPut("{id}"), SwaggerOperation(summary: "update a member of the collection", null)]
+    public async Task<IActionResult> Put(int id, [FromBody] Country country)
+    {
+        if (id != country.Id)
+        {
+            return BadRequest();
+        }
+
+        _dataContext.Entry(country).State = EntityState.Modified;
+
+        try
+        {
+            await _dataContext.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!_dataContext.Countries.Any(e => e.Id == id))
+            {
+                return NotFound();
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        return NoContent();
+    }
+}
