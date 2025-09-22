@@ -12,7 +12,8 @@ builder.Services.AddControllers().AddControllersAsServices();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo {
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
         Title = "Medals API",
         Version = "v1",
         Description = "Olympic Medals API",
@@ -26,7 +27,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: "Open",
         builder =>
         {
-            builder
+            builder.WithOrigins("http://localhost:5173") // Allow your local frontend
                 .AllowAnyOrigin()
                 .AllowAnyMethod()
                 .AllowAnyHeader();
@@ -35,6 +36,13 @@ builder.Services.AddCors(options =>
 
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<DataContext>();
+    context.Database.Migrate();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
