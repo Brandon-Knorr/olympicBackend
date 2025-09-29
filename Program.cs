@@ -12,8 +12,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: "Open",
         builder =>
         {
-            builder
-                .AllowAnyOrigin()
+                builder.WithOrigins("https://brandon-knorr.github.io")
                 .AllowAnyMethod()
                 .AllowAnyHeader();
         });
