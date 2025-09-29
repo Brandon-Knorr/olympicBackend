@@ -1,13 +1,33 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Medals_Api.Hubs;
 
-var builder = WebApplication.CreateBuilder(args);
+// Connection info stored in appsettings.json
+IConfiguration configuration = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json")
+    .Build(); var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddDbContext<DataContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultSQLiteConnection")));
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: "Hubs",
+          builder =>
+          {
+              builder
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                // Anonymous origins NOT allowed for web sockets
+                .WithOrigins("http://localhost:5173",
+    "https://jgrissom.github.io",
+    "https://brandon-knorr.github.io")
+                .AllowCredentials();
+          });
+});
+builder.Services.AddSignalR();
+// Register the DataContext service
+builder.Services.AddDbContext<DataContext>(options => options.UseSqlite(configuration["ConnectionStrings:DefaultSQLiteConnection"]));
 
-builder.Services.AddControllers().AddControllersAsServices();
+builder.Services.AddControllers().AddNewtonsoftJson();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -18,46 +38,27 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "Olympic Medals API",
     });
+    c.TagActionsBy(api => [api.HttpMethod]);
     c.EnableAnnotations();
 });
 
-// Add CORS services to the container.
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(name: "Open",
-        builder =>
-        {
-            builder.WithOrigins("http://localhost:5173") // Allow your local frontend
-                .AllowAnyOrigin()
-                .AllowAnyMethod()
-                .AllowAnyHeader();
-        });
-});
-
-
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    var context = services.GetRequiredService<DataContext>();
-    context.Database.Migrate();
-}
+app.UseRouting();
+app.UseCors("Hubs");
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// if (app.Environment.IsDevelopment())
+// {
+app.UseSwagger();
+app.UseSwaggerUI();
+// }
 
-// THIS IS THE KEY CHANGE -> UseCors must come before UseAuthorization
-app.UseCors("Open");
-
-// app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<MedalsHub>("/medalsHub");
 
 app.Run();

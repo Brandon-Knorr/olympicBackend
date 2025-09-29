@@ -1,89 +1,63 @@
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.JsonPatch;
+using Microsoft.AspNetCore.SignalR;
+using Medals_Api.Hubs;
 
-[ApiController]
-[Route("api/[controller]")] // <-- This is the corrected line
-public class CountryController : ControllerBase
+[ApiController, Route("[controller]/country")]
+public class CountryController(DataContext db, IHubContext<MedalsHub> hc) : ControllerBase
 {
-    private readonly DataContext _dataContext;
-    public CountryController(DataContext db)
-    {
-        _dataContext = db;
-    }
+    private readonly DataContext _dataContext = db;
+    private readonly IHubContext<MedalsHub> _hubContext = hc;
 
-    // GET: api/Country
+    // http get entire collection
     [HttpGet, SwaggerOperation(summary: "return entire collection", null)]
     public IEnumerable<Country> Get()
     {
         return _dataContext.Countries;
     }
-
-    // GET: api/Country/5
+    // http get specific member of collection
     [HttpGet("{id}"), SwaggerOperation(summary: "return specific member of collection", null)]
-    public async Task<ActionResult<Country>> Get(int id)
+    public Country? Get(int id)
     {
-        var country = await _dataContext.Countries.FindAsync(id);
-        if (country == null)
-        {
-            return NotFound();
-        }
-
-        return country;
+        return _dataContext.Countries.Find(id);
     }
-
-    // POST: api/Country
+    // http post member to collection
     [HttpPost, SwaggerOperation(summary: "add member to collection", null), ProducesResponseType(typeof(Country), 201), SwaggerResponse(201, "Created")]
     public async Task<ActionResult<Country>> Post([FromBody] Country country)
     {
-        _dataContext.Countries.Add(country);
+        _dataContext.Add(country);
         await _dataContext.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(Get), new { id = country.Id }, country);
+        await _hubContext.Clients.All.SendAsync("ReceiveAddMessage", country);
+        return country;
     }
-
-    // DELETE: api/Country/5
+    // http delete member from collection
     [HttpDelete("{id}"), SwaggerOperation(summary: "delete member from collection", null), ProducesResponseType(typeof(Country), 204), SwaggerResponse(204, "No Content")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<ActionResult> Delete(int id)
     {
-        var country = await _dataContext.Countries.FindAsync(id);
+        Country? country = await _dataContext.Countries.FindAsync(id);
         if (country == null)
         {
             return NotFound();
         }
-
-        _dataContext.Countries.Remove(country);
+        _dataContext.Remove(country);
         await _dataContext.SaveChangesAsync();
-
+        await _hubContext.Clients.All.SendAsync("ReceiveDeleteMessage", id);
         return NoContent();
     }
-
-    // PUT: api/Country/5
-    [HttpPut("{id}"), SwaggerOperation(summary: "update a member of the collection", null)]
-    public async Task<IActionResult> Put(int id, [FromBody] Country country)
+    // http patch member of collection
+    [HttpPatch("{id}"), SwaggerOperation(summary: "update member from collection", null), ProducesResponseType(typeof(Country), 204), SwaggerResponse(204, "No Content")]
+    // update country (specific fields)
+    public async Task<ActionResult> Patch(int id, [FromBody] JsonPatchDocument<Country> patch)
     {
-        if (id != country.Id)
+        Country? country = await _dataContext.Countries.FindAsync(id);
+        if (country == null)
         {
-            return BadRequest();
+            return NotFound();
         }
-
-        _dataContext.Entry(country).State = EntityState.Modified;
-        try
-        {
-            await _dataContext.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!_dataContext.Countries.Any(e => e.Id == id))
-            {
-                return NotFound();
-            }
-            else
-            {
-                throw;
-            }
-        }
-
+        patch.ApplyTo(country);
+        await _dataContext.SaveChangesAsync();
+        await _hubContext.Clients.All.SendAsync("ReceivePatchMessage", country);
         return NoContent();
     }
 }
