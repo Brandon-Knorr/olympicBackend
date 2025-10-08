@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Microsoft.AspNetCore.JsonPatch;
+using Microsoft.AspNetCore.SignalR;
+using Medals_Api.Hubs;
 
 [ApiController, Route("[controller]/country")]
-public class ApiController(DataContext db) : ControllerBase
+public class ApiController(DataContext db, IHubContext<MedalsHub> hc) : ControllerBase
 {
     private readonly DataContext _dataContext = db;
+    private readonly IHubContext<MedalsHub> _hubContext = hc;
 
     // http get entire collection
     [HttpGet, SwaggerOperation(summary: "return entire collection", null)]
@@ -25,6 +28,7 @@ public class ApiController(DataContext db) : ControllerBase
     {
         _dataContext.Add(country);
         await _dataContext.SaveChangesAsync();
+        await _hubContext.Clients.All.SendAsync("ReceivedAddMessage", country);
         return country;
     }
     // http delete member from collection
@@ -38,6 +42,7 @@ public class ApiController(DataContext db) : ControllerBase
         }
         _dataContext.Remove(country);
         await _dataContext.SaveChangesAsync();
+        await _hubContext.Clients.All.SendAsync("ReceivedDeleteMessage", id);
         return NoContent();
     }
     // http patch member of collection
@@ -52,6 +57,7 @@ public class ApiController(DataContext db) : ControllerBase
         }
         patch.ApplyTo(country);
         await _dataContext.SaveChangesAsync();
+        await _hubContext.Clients.All.SendAsync("ReceivedPatchMessage", country);
         return NoContent();
     }
 }
