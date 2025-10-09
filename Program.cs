@@ -13,15 +13,15 @@ IConfiguration configuration = new ConfigurationBuilder()
 // Add services to the container.
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(name: "Hubs",
-        builder =>
-        {
-            builder
-                .WithOrigins("http://localhost:5173", "https://brandon-knorr.github.io")
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .AllowCredentials();
-        });
+  options.AddPolicy(name: "Hubs",
+      builder =>
+      {
+        builder
+              .WithOrigins("http://localhost:5173", "https://brandon-knorr.github.io")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+      });
 });
 
 builder.Services.AddSignalR();
@@ -38,25 +38,25 @@ builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "Medals API",
-        Version = "v1",
-        Description = "Olympic Medals API",
-    });
-    c.TagActionsBy(api => [api.HttpMethod]);
-    c.EnableAnnotations();
-    // To Enable authorization using Swagger (JWT)
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Enter 'Bearer' [space] and then your valid token in the text input below.\r\n\r\nExample: \"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\"",
-    });
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+  c.SwaggerDoc("v1", new OpenApiInfo
+  {
+    Title = "Medals API",
+    Version = "v1",
+    Description = "Olympic Medals API",
+  });
+  c.TagActionsBy(api => [api.HttpMethod]);
+  c.EnableAnnotations();
+  // To Enable authorization using Swagger (JWT)
+  c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
+  {
+    Name = "Authorization",
+    Type = SecuritySchemeType.ApiKey,
+    Scheme = "Bearer",
+    BearerFormat = "JWT",
+    In = ParameterLocation.Header,
+    Description = "Enter 'Bearer' [space] and then your valid token in the text input below.\r\n\r\nExample: \"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\"",
+  });
+  c.AddSecurityRequirement(new OpenApiSecurityRequirement
   {
     {
       new OpenApiSecurityScheme
@@ -75,24 +75,24 @@ builder.Services.AddSwaggerGen(c =>
 // Add Authentication
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+  options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+  options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+  options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 })
 
 // Add Jwt Bearer
 .AddJwtBearer(options =>
 {
-    options.SaveToken = true;
-    options.RequireHttpsMetadata = false;
-    options.TokenValidationParameters = new TokenValidationParameters()
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidAudience = configuration["JWT:ValidAudience"],
-        ValidIssuer = configuration["JWT:ValidIssuer"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Secret"]!))
-    };
+  options.SaveToken = true;
+  options.RequireHttpsMetadata = false;
+  options.TokenValidationParameters = new TokenValidationParameters()
+  {
+    ValidateIssuer = true,
+    ValidateAudience = true,
+    ValidAudience = configuration["JWT:ValidAudience"],
+    ValidIssuer = configuration["JWT:ValidIssuer"],
+    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Secret"]!))
+  };
 });
 
 var app = builder.Build();
